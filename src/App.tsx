@@ -19,19 +19,18 @@ function App() {
 
   const handleAddTask = () => {
     if (!newTaskTitle.trim()) return;
-    
+
     addTask({
       title: newTaskTitle,
       startDate: currentDate.toISOString(),
       isAllDay: true,
       priority: 'medium',
       status: 'pending',
-      categoryId: '1', // Default to work or first category
       subtasks: [],
       repeatRule: 'none',
       reminderTime: 'none',
     });
-    
+
     setNewTaskTitle('');
   };
 

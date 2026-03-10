@@ -7,6 +7,7 @@ import { isTaskVisibleOnDate } from '../utils/taskUtils';
 import { formatTimeRange } from '../utils/timeUtils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { listItemVariants, springLayout } from '../utils/animations';
+import { ConfirmDialog } from './ConfirmDialog';
 
 interface TaskListProps {
   date: Date;
@@ -21,8 +22,13 @@ export const TaskList: React.FC<TaskListProps> = ({ date, onTaskClick }) => {
   const setSortOption = useStore((state) => state.setSortOption);
   const toggleTaskStatus = useStore((state) => state.toggleTaskStatus);
   const deleteTask = useStore((state) => state.deleteTask);
-  
+
   const [showSortMenu, setShowSortMenu] = useState(false);
+
+  // Confirm Dialog State
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
+  const [taskToDeleteTitle, setTaskToDeleteTitle] = useState('');
 
   const daysTasks = tasks.filter((task) => isTaskVisibleOnDate(task, date));
 
@@ -68,6 +74,27 @@ export const TaskList: React.FC<TaskListProps> = ({ date, onTaskClick }) => {
       setSortOption({ field, direction: 'desc' });
     }
     setShowSortMenu(false);
+  };
+
+  const handleDeleteClick = (taskId: string, taskTitle: string) => {
+    setTaskToDelete(taskId);
+    setTaskToDeleteTitle(taskTitle);
+    setShowConfirm(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (taskToDelete) {
+      deleteTask(taskToDelete);
+    }
+    setShowConfirm(false);
+    setTaskToDelete(null);
+    setTaskToDeleteTitle('');
+  };
+
+  const handleCancelDelete = () => {
+    setShowConfirm(false);
+    setTaskToDelete(null);
+    setTaskToDeleteTitle('');
   };
 
   const getSortLabel = (field: SortField) => {
@@ -139,7 +166,7 @@ export const TaskList: React.FC<TaskListProps> = ({ date, onTaskClick }) => {
             const category = categories.find(c => c.id === task.categoryId);
 
             return (
-              <motion.div 
+              <motion.div
                 key={task.id}
                 layout
                 variants={listItemVariants}
@@ -147,7 +174,7 @@ export const TaskList: React.FC<TaskListProps> = ({ date, onTaskClick }) => {
                 animate="visible"
                 exit="exit"
                 transition={springLayout as any}
-                className="group flex items-center p-4 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer relative overflow-hidden"
+                className="flex items-center p-4 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer relative overflow-hidden"
                 onClick={() => onTaskClick(task.id)}
                 style={{
                   borderLeft: `4px solid ${priorityColor}`,
@@ -200,9 +227,9 @@ export const TaskList: React.FC<TaskListProps> = ({ date, onTaskClick }) => {
                   )}
                 </div>
 
-                <button 
-                  onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }}
-                  className="ml-2 p-2 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all active:scale-90"
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleDeleteClick(task.id, task.title); }}
+                  className="ml-2 p-2 text-gray-400 hover:text-red-500 transition-colors active:scale-90"
                 >
                   <Trash2 size={18} />
                 </button>
@@ -211,6 +238,17 @@ export const TaskList: React.FC<TaskListProps> = ({ date, onTaskClick }) => {
           })}
         </AnimatePresence>
       </motion.div>
+
+      <ConfirmDialog
+        isOpen={showConfirm}
+        title="删除任务"
+        message={`确定要删除任务"${taskToDeleteTitle}"吗？此操作无法撤销。`}
+        confirmText="删除"
+        cancelText="取消"
+        confirmVariant="danger"
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+      />
     </div>
   );
 };

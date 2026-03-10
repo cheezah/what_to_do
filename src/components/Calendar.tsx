@@ -28,7 +28,7 @@ type ViewMode = 'month' | 'week';
 
 export const Calendar: React.FC<CalendarProps> = ({ selectedDate, onSelectDate }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState<ViewMode>('month');
+  const [viewMode, setViewMode] = useState<ViewMode>('week');
   const tasks = useStore((state) => state.tasks);
 
   // Sync internal state when selectedDate changes externally

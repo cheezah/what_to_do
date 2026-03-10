@@ -3,6 +3,7 @@ import { useStore } from '../store/useStore';
 import { Plus, X, Trash2, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { backdropVariants, modalVariants } from '../utils/animations';
+import { ConfirmDialog } from './ConfirmDialog';
 
 interface CategoryManagerProps {
   onClose: () => void;
@@ -21,6 +22,10 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ onClose }) => 
   // Form State
   const [name, setName] = useState('');
   const [color, setColor] = useState('#3B82F6');
+
+  // Confirm Dialog State
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
 
   const resetForm = () => {
     setName('');
@@ -44,10 +49,22 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ onClose }) => 
     resetForm();
   };
 
-  const handleDelete = (id: string) => {
-    if (window.confirm('确定要删除这个分类吗？')) {
-      deleteCategory(id);
+  const handleDeleteClick = (id: string) => {
+    setCategoryToDelete(id);
+    setShowConfirm(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (categoryToDelete) {
+      deleteCategory(categoryToDelete);
     }
+    setShowConfirm(false);
+    setCategoryToDelete(null);
+  };
+
+  const handleCancelDelete = () => {
+    setShowConfirm(false);
+    setCategoryToDelete(null);
   };
 
   const colors = [
@@ -108,14 +125,14 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ onClose }) => 
                     </div>
                   )}
                   {categories.map((cat) => (
-                    <div key={cat.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100 hover:bg-white hover:shadow-sm transition-all group">
+                    <div key={cat.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100 hover:bg-white hover:shadow-sm transition-all">
                       <div className="flex items-center gap-3">
                         <div className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: cat.color }}></div>
                         <span className="font-medium text-gray-700">{cat.name}</span>
                       </div>
                       {!cat.isDefault && (
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => handleDelete(cat.id)} className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50">
+                        <div className="flex gap-1">
+                          <button onClick={() => handleDeleteClick(cat.id)} className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors">
                             <Trash2 size={16} />
                           </button>
                         </div>
@@ -176,6 +193,17 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ onClose }) => 
           </AnimatePresence>
         </motion.div>
       </div>
+
+      <ConfirmDialog
+        isOpen={showConfirm}
+        title="删除分类"
+        message="确定要删除这个分类吗？关联的任务将自动解除分类绑定。"
+        confirmText="删除"
+        cancelText="取消"
+        confirmVariant="danger"
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+      />
     </AnimatePresence>
   );
 };

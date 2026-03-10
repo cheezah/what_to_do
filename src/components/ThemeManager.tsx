@@ -5,6 +5,7 @@ import type { Theme, Priority } from '../types';
 import { Plus, X, Trash2, Edit2, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { backdropVariants, modalVariants } from '../utils/animations';
+import { ConfirmDialog } from './ConfirmDialog';
 
 interface ThemeManagerProps {
   onClose: () => void;
@@ -23,6 +24,10 @@ export const ThemeManager: React.FC<ThemeManagerProps> = ({ onClose }) => {
   const [name, setName] = useState('');
   const [color, setColor] = useState('#3B82F6');
   const [priority, setPriority] = useState<Priority | undefined>(undefined);
+
+  // Confirm Dialog State
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [themeToDelete, setThemeToDelete] = useState<string | null>(null);
 
   const resetForm = () => {
     setName('');
@@ -60,10 +65,22 @@ export const ThemeManager: React.FC<ThemeManagerProps> = ({ onClose }) => {
     setIsAdding(true);
   };
 
-  const handleDelete = (id: string) => {
-    if (window.confirm('确定要删除这个主题吗？关联的任务将自动解除绑定。')) {
-      deleteTheme(id);
+  const handleDeleteClick = (id: string) => {
+    setThemeToDelete(id);
+    setShowConfirm(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (themeToDelete) {
+      deleteTheme(themeToDelete);
     }
+    setShowConfirm(false);
+    setThemeToDelete(null);
+  };
+
+  const handleCancelDelete = () => {
+    setShowConfirm(false);
+    setThemeToDelete(null);
   };
 
   const colors = [
@@ -124,7 +141,7 @@ export const ThemeManager: React.FC<ThemeManagerProps> = ({ onClose }) => {
                     </div>
                   )}
                   {themes.map((theme) => (
-                    <div key={theme.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100 hover:bg-white hover:shadow-sm transition-all group">
+                    <div key={theme.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100 hover:bg-white hover:shadow-sm transition-all">
                       <div className="flex items-center gap-3">
                         <div className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: theme.color }}></div>
                         <div>
@@ -136,11 +153,11 @@ export const ThemeManager: React.FC<ThemeManagerProps> = ({ onClose }) => {
                           )}
                         </div>
                       </div>
-                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => handleEdit(theme)} className="p-1.5 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50">
+                      <div className="flex gap-1">
+                        <button onClick={() => handleEdit(theme)} className="p-1.5 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-colors">
                           <Edit2 size={16} />
                         </button>
-                        <button onClick={() => handleDelete(theme.id)} className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50">
+                        <button onClick={() => handleDeleteClick(theme.id)} className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors">
                           <Trash2 size={16} />
                         </button>
                       </div>
@@ -220,6 +237,17 @@ export const ThemeManager: React.FC<ThemeManagerProps> = ({ onClose }) => {
           </AnimatePresence>
         </motion.div>
       </div>
+
+      <ConfirmDialog
+        isOpen={showConfirm}
+        title="删除主题"
+        message="确定要删除这个主题吗？关联的任务将自动解除主题绑定。"
+        confirmText="删除"
+        cancelText="取消"
+        confirmVariant="danger"
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+      />
     </AnimatePresence>
   );
 };
