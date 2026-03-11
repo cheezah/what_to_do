@@ -25,11 +25,12 @@
 
 ### 文档更新提醒
 
-- [product_plan.md](docs/product_plan.md) (最后更新: 2026-03-10)
-- [architecture.md](docs/architecture.md) (最后更新: 2026-03-10)
-- [ui_design.md](docs/ui_design.md) (最后更新: 2026-03-10)
-- [collaboration_rules.md](docs/collaboration_rules.md) (最后更新: 2026-03-10)
-- [changelog_20260310.md](docs/changelog_20260310.md) (新增: 修改日志)
+- [product_plan.md](docs/product_plan.md) (最后更新: 2026-03-11)
+- [architecture.md](docs/architecture.md) (最后更新: 2026-03-11)
+- [ui_design.md](docs/ui_design.md) (最后更新: 2026-03-11)
+- [collaboration_rules.md](docs/collaboration_rules.md) (最后更新: 2026-03-11)
+- [changelog_20260311.md](docs/changelog_20260311.md) (新增: 2026-03-11 修改日志)
+- [changelog_20260310.md](docs/changelog_20260310.md) (修改日志)
 - [deployment_guide.md](docs/deployment_guide.md) (部署指南)
 
 ## 2. 对话约束规则
@@ -122,6 +123,23 @@
 - [ ] 是否使用 `import type` 导入类型
 - [ ] 是否避免了类型作为值使用
 
+### 5.5 Store 使用规范
+
+- [ ] Store selector 是否避免直接返回过滤后的新数组/对象
+- [ ] 是否使用 `useMemo` 缓存从 Store 派生的数据
+- [ ] 是否确保 selector 返回稳定的引用，避免无限循环
+
+### 5.6 归档功能实现
+
+- [ ] 是否为 Category/Theme 添加 `archived` 可选属性
+- [ ] 是否实现 archive/unarchive actions
+- [ ] 编辑界面是否过滤已归档的分类和主题
+- [ ] 已归档项目是否有清晰的视觉区分（灰色、删除线、标签）
+
 ---
 
-_最后更新: 2026-03-10_
+### 6. 文档交付
+
+当对话完成后，需要回顾并总结整段对话，将修改写入changelog之中，并对当前系统更新所涉及的架构调整和规范变更进行全面审查，识别所有与原有架构设计和编码规范存在差异的部分。根据审查结果，系统性地更新相关的架构文档、设计规范文件及代码实现，确保所有变更内容准确反映到原有文件中。
+
+_最后更新: 2026-03-11_

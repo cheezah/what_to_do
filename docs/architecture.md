@@ -30,8 +30,8 @@ Store (Zustand)
 ├── State: tasks[], categories[], themes[], sortOption
 ├── Actions:
 │   ├── Task: addTask, updateTask, deleteTask, toggleStatus
-│   ├── Theme: addTheme, updateTheme, deleteTheme
-│   └── Category: addCategory, deleteCategory
+│   ├── Theme: addTheme, updateTheme, deleteTheme, archiveTheme, unarchiveTheme
+│   └── Category: addCategory, deleteCategory, archiveCategory, unarchiveCategory
 └── Persistence: localStorage ('what-to-do-storage')
 ```
 
@@ -39,16 +39,16 @@ Store (Zustand)
 
 ### 3.1 核心组件
 
-| 组件            | 职责               | 关键特性                                                      |
-| --------------- | ------------------ | ------------------------------------------------------------- |
-| Calendar        | 日历展示与日期选择 | 周视图默认，支持周/月切换                                     |
-| TaskList        | 任务列表展示       | 排序、过滤、常驻操作按钮                                      |
-| TaskEditModal   | 任务编辑           | 子任务管理、二次确认删除、自定义日期选择器、自定义下拉选择器  |
-| ThemeManager    | 主题管理           | 主题CRUD、关联优先级                                          |
-| CategoryManager | 分类管理           | 分类CRUD、颜色标识                                            |
-| ConfirmDialog   | 通用确认弹窗       | 统一删除确认、动画效果                                        |
-| DateTimePicker  | 日期时间选择       | 自定义日历组件、年/月/日三级选择、时间选择、响应式设计        |
-| CustomSelect    | 下拉选择           | 自定义选择组件、支持图标/颜色、移动端底部弹窗、桌面端下拉列表 |
+| 组件            | 职责               | 关键特性                                                                          |
+| --------------- | ------------------ | --------------------------------------------------------------------------------- |
+| Calendar        | 日历展示与日期选择 | 周视图默认，支持周/月切换                                                         |
+| TaskList        | 任务列表展示       | 排序、过滤、常驻操作按钮                                                          |
+| TaskEditModal   | 任务编辑           | 子任务管理、二次确认删除、自定义日期选择器、自定义下拉选择器、过滤已归档分类/主题 |
+| ThemeManager    | 主题管理           | 主题CRUD、关联优先级、归档/取消归档                                               |
+| CategoryManager | 分类管理           | 分类CRUD、颜色标识、归档/取消归档                                                 |
+| ConfirmDialog   | 通用确认弹窗       | 统一删除确认、动画效果                                                            |
+| DateTimePicker  | 日期时间选择       | 自定义日历组件、年/月/日三级选择、时间选择、响应式设计                            |
+| CustomSelect    | 下拉选择           | 自定义选择组件、支持图标/颜色、移动端底部弹窗、桌面端下拉列表                     |
 
 ### 3.2 组件层次关系
 
@@ -126,12 +126,27 @@ App
 - **动画反馈**: 列表项依次滑入，提供流畅的视觉反馈
 - **关闭机制**: 提供明确的关闭按钮和点击遮罩层关闭
 
+### 6.6 归档功能设计
+
+- **软删除**: 归档是一种软删除机制，保留数据但不在主界面显示
+- **状态管理**: Category 和 Theme 实体新增 `archived` 布尔属性
+- **数据隔离**: 已归档项目在编辑任务时不可选择
+- **视觉区分**: 已归档项目使用灰色、删除线、标签等方式标识
+- **可逆操作**: 支持取消归档，恢复项目的正常使用
+
+### 6.7 Store Selector 最佳实践
+
+- **避免直接过滤**: Store selector 中避免直接返回过滤后的新数组
+- **使用 useMemo**: 从 Store 获取原始数据后，使用 useMemo 缓存派生数据
+- **防止无限循环**: 确保 selector 返回稳定的引用，避免触发无限重渲染
+
 ## 7. 性能优化方案
 
 - **组件按需渲染**: 列表项使用独立的 React 组件，配合 `AnimatePresence` 实现高效动画。
 - **动画性能**: 使用 `layout` 属性实现零布局抖动的排序动画，动画运行在 GPU 线程。
 - **本地存储优化**: Zustand persist 自动处理序列化和反序列化，性能开销小。
 - **CSS 原子化**: Tailwind CSS 生成最小 CSS 文件。
+- **避免无限循环**: 使用 `useMemo` 缓存从 Store 派生的数据和 options 数组，防止组件无限重渲染。
 
 ## 8. 部署架构
 
@@ -141,9 +156,17 @@ App
 
 ---
 
-_最后更新: 2026-03-10_
+_最后更新: 2026-03-11_
 
 ## 9. 更新记录
+
+### 2026-03-11
+
+- 更新 Store Actions 列表，添加归档相关 actions
+- 更新核心组件特性描述，添加归档功能
+- 新增 "归档功能设计" 设计决策章节
+- 新增 "Store Selector 最佳实践" 设计决策章节
+- 更新性能优化方案，添加避免无限循环的建议
 
 ### 2026-03-10 (第二轮)
 

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { PRIORITY_COLORS } from '../types';
 import type { Theme, Priority } from '../types';
-import { Plus, X, Trash2, Edit2, ArrowLeft } from 'lucide-react';
+import { Plus, X, Trash2, Edit2, ArrowLeft, Archive, ArchiveRestore } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { backdropVariants, modalVariants } from '../utils/animations';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -16,9 +16,12 @@ export const ThemeManager: React.FC<ThemeManagerProps> = ({ onClose }) => {
   const addTheme = useStore((state) => state.addTheme);
   const updateTheme = useStore((state) => state.updateTheme);
   const deleteTheme = useStore((state) => state.deleteTheme);
+  const archiveTheme = useStore((state) => state.archiveTheme);
+  const unarchiveTheme = useStore((state) => state.unarchiveTheme);
 
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   // Form State
   const [name, setName] = useState('');
@@ -83,15 +86,26 @@ export const ThemeManager: React.FC<ThemeManagerProps> = ({ onClose }) => {
     setThemeToDelete(null);
   };
 
+  const handleArchive = (id: string) => {
+    archiveTheme(id);
+  };
+
+  const handleUnarchive = (id: string) => {
+    unarchiveTheme(id);
+  };
+
   const colors = [
-    '#3B82F6', '#10B981', '#F59E0B', '#EF4444', 
+    '#3B82F6', '#10B981', '#F59E0B', '#EF4444',
     '#8B5CF6', '#EC4899', '#6366F1', '#14B8A6'
   ];
+
+  const activeThemes = themes.filter((theme) => !theme.archived);
+  const archivedThemes = themes.filter((theme) => theme.archived);
 
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-50 flex items-center justify-center">
-        <motion.div 
+        <motion.div
           className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
           variants={backdropVariants}
           initial="hidden"
@@ -100,7 +114,7 @@ export const ThemeManager: React.FC<ThemeManagerProps> = ({ onClose }) => {
           onClick={onClose}
         />
 
-        <motion.div 
+        <motion.div
           className="relative w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl overflow-hidden"
           variants={modalVariants}
           initial="hidden"
@@ -110,7 +124,7 @@ export const ThemeManager: React.FC<ThemeManagerProps> = ({ onClose }) => {
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center gap-2">
               {isAdding && (
-                <button 
+                <button
                   onClick={resetForm}
                   className="p-1.5 -ml-2 text-gray-500 hover:text-gray-800 rounded-full hover:bg-gray-100 transition-colors"
                 >
@@ -126,21 +140,28 @@ export const ThemeManager: React.FC<ThemeManagerProps> = ({ onClose }) => {
 
           <AnimatePresence mode="wait">
             {!isAdding ? (
-              <motion.div 
+              <motion.div
                 key="list"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.2 }}
               >
-                <div className="space-y-3 mb-6 max-h-[300px] overflow-y-auto scrollbar-hide">
-                  {themes.length === 0 && (
+                {/* Active Themes */}
+                <div className="space-y-3 mb-4 max-h-[200px] overflow-y-auto scrollbar-hide">
+                  {activeThemes.length === 0 && archivedThemes.length === 0 && (
                     <div className="text-center py-8">
                       <p className="text-gray-400">暂无自定义主题</p>
                       <p className="text-xs text-gray-300 mt-1">创建主题来分类您的任务</p>
                     </div>
                   )}
-                  {themes.map((theme) => (
+                  {activeThemes.length === 0 && archivedThemes.length > 0 && !showArchived && (
+                    <div className="text-center py-8">
+                      <p className="text-gray-400">没有未归档的主题</p>
+                      <p className="text-xs text-gray-300 mt-1">点击下方"查看已归档"查看归档主题</p>
+                    </div>
+                  )}
+                  {activeThemes.map((theme) => (
                     <div key={theme.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100 hover:bg-white hover:shadow-sm transition-all">
                       <div className="flex items-center gap-3">
                         <div className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: theme.color }}></div>
@@ -154,17 +175,87 @@ export const ThemeManager: React.FC<ThemeManagerProps> = ({ onClose }) => {
                         </div>
                       </div>
                       <div className="flex gap-1">
-                        <button onClick={() => handleEdit(theme)} className="p-1.5 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-colors">
+                        <button
+                          onClick={() => handleEdit(theme)}
+                          className="p-1.5 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+                          title="编辑"
+                        >
                           <Edit2 size={16} />
                         </button>
-                        <button onClick={() => handleDeleteClick(theme.id)} className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors">
+                        <button
+                          onClick={() => handleArchive(theme.id)}
+                          className="p-1.5 text-gray-400 hover:text-amber-600 rounded-lg hover:bg-amber-50 transition-colors"
+                          title="归档"
+                        >
+                          <Archive size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteClick(theme.id)}
+                          className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                          title="删除"
+                        >
                           <Trash2 size={16} />
                         </button>
                       </div>
                     </div>
                   ))}
                 </div>
-                
+
+                {/* Archived Themes Section */}
+                {archivedThemes.length > 0 && (
+                  <div className="mb-4">
+                    <button
+                      onClick={() => setShowArchived(!showArchived)}
+                      className="w-full py-2 flex items-center justify-center gap-2 text-sm text-gray-500 hover:text-gray-700 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all"
+                    >
+                      <Archive size={16} />
+                      {showArchived ? '隐藏已归档' : `查看已归档 (${archivedThemes.length})`}
+                    </button>
+
+                    <AnimatePresence>
+                      {showArchived && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="mt-3 space-y-2 max-h-[120px] overflow-y-auto scrollbar-hide"
+                        >
+                          {archivedThemes.map((theme) => (
+                            <div
+                              key={theme.id}
+                              className="flex items-center justify-between p-3 bg-gray-100/50 rounded-xl border border-gray-200"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="w-4 h-4 rounded-full shadow-sm opacity-50" style={{ backgroundColor: theme.color }}></div>
+                                <div>
+                                  <span className="font-medium text-gray-500 line-through">{theme.name}</span>
+                                  <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-gray-200 text-gray-500">已归档</span>
+                                </div>
+                              </div>
+                              <div className="flex gap-1">
+                                <button
+                                  onClick={() => handleUnarchive(theme.id)}
+                                  className="p-1.5 text-gray-400 hover:text-green-600 rounded-lg hover:bg-green-50 transition-colors"
+                                  title="取消归档"
+                                >
+                                  <ArchiveRestore size={16} />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteClick(theme.id)}
+                                  className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                                  title="删除"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                )}
+
                 <button
                   onClick={() => setIsAdding(true)}
                   className="w-full py-3 flex items-center justify-center gap-2 text-blue-600 bg-blue-50 border border-blue-100 rounded-xl hover:bg-blue-100 transition-all font-medium active:scale-[0.98]"
@@ -174,7 +265,7 @@ export const ThemeManager: React.FC<ThemeManagerProps> = ({ onClose }) => {
                 </button>
               </motion.div>
             ) : (
-              <motion.div 
+              <motion.div
                 key="form"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -215,8 +306,8 @@ export const ThemeManager: React.FC<ThemeManagerProps> = ({ onClose }) => {
                         key={p}
                         onClick={() => setPriority(priority === p ? undefined : p)}
                         className={`flex-1 py-2 text-xs font-medium rounded-lg border transition-all flex items-center justify-center gap-1.5 ${
-                          priority === p 
-                            ? 'bg-gray-800 text-white border-transparent shadow-md' 
+                          priority === p
+                            ? 'bg-gray-800 text-white border-transparent shadow-md'
                             : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
                         }`}
                       >

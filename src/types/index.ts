@@ -32,6 +32,7 @@ export interface Category {
   name: string;
   color: string;
   isDefault?: boolean;
+  archived?: boolean;
 }
 
 export interface Theme {
@@ -41,6 +42,7 @@ export interface Theme {
   associatedPriority?: Priority;
   categoryId?: string; // Associated category
   createdAt: string;
+  archived?: boolean;
 }
 
 export type SortField = 'createdAt' | 'dueDate' | 'category' | 'theme';

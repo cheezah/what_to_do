@@ -41,26 +41,26 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col max-w-md mx-auto shadow-xl overflow-hidden relative">
-      {/* Header */}
-      <header className="px-4 py-4 bg-white border-b flex justify-between items-center sticky top-0 z-10">
+    <div className="h-screen bg-gray-50 flex flex-col max-w-md mx-auto shadow-xl overflow-hidden relative">
+      {/* Fixed Header */}
+      <header className="flex-none px-4 py-4 bg-white border-b border-gray-100 flex justify-between items-center z-20">
         <h1 className="text-xl font-bold text-gray-800">
           What To Do
         </h1>
         <div className="flex gap-2">
-          <button 
+          <button
             onClick={() => setShowCategoryManager(true)}
             className="p-2 text-gray-500 hover:text-blue-600 rounded-full hover:bg-gray-100 transition-colors"
           >
             <Folder size={20} />
           </button>
-          <button 
+          <button
             onClick={() => setShowThemeManager(true)}
             className="p-2 text-gray-500 hover:text-blue-600 rounded-full hover:bg-gray-100 transition-colors"
           >
             <Palette size={20} />
           </button>
-          <button 
+          <button
             onClick={() => setCurrentDate(new Date())}
             className="text-sm font-medium text-blue-600 px-3 py-1 rounded-full hover:bg-blue-50 transition-colors"
           >
@@ -71,33 +71,33 @@ function App() {
 
       {/* Main Content Area - Scrollable */}
       <main className="flex-1 overflow-y-auto scrollbar-hide">
-        <div className="p-4 pb-24">
+        <div className="p-4 pb-4">
           <Calendar selectedDate={currentDate} onSelectDate={setCurrentDate} />
 
           <div className="mt-6 space-y-3">
             <h2 className="font-semibold text-gray-700 ml-1">
               {format(currentDate, 'M月d日 EEEE', { locale: zhCN })}
             </h2>
-            <TaskList 
-              date={currentDate} 
+            <TaskList
+              date={currentDate}
               onTaskClick={setEditingTaskId}
             />
           </div>
         </div>
       </main>
 
-      {/* Quick Add Area - Fixed Bottom */}
-      <div className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+      {/* Fixed Quick Add Bar - Bottom */}
+      <div className="flex-none p-4 bg-white border-t border-gray-100 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-20">
         <div className="flex items-center gap-3">
-          <input 
-            type="text" 
+          <input
+            type="text"
             value={newTaskTitle}
             onChange={(e) => setNewTaskTitle(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="快速添加任务..." 
+            placeholder="快速添加任务..."
             className="flex-1 px-5 py-3 bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:bg-white transition-all text-gray-800 placeholder-gray-400"
           />
-          <button 
+          <button
             onClick={handleAddTask}
             className="p-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 active:scale-95 transition-all shadow-lg shadow-blue-500/30"
           >

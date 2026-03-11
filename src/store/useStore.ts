@@ -8,19 +8,23 @@ interface State {
   categories: Category[];
   themes: Theme[];
   sortOption: SortOption;
-  
+
   // Actions
   addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
   deleteTask: (id: string) => void;
   toggleTaskStatus: (id: string) => void;
-  
+
   addCategory: (name: string, color: string) => void;
   deleteCategory: (id: string) => void;
+  archiveCategory: (id: string) => void;
+  unarchiveCategory: (id: string) => void;
 
   addTheme: (theme: Omit<Theme, 'id' | 'createdAt'>) => void;
   updateTheme: (id: string, updates: Partial<Theme>) => void;
   deleteTheme: (id: string) => void;
+  archiveTheme: (id: string) => void;
+  unarchiveTheme: (id: string) => void;
 
   setSortOption: (option: SortOption) => void;
 }
@@ -79,6 +83,18 @@ export const useStore = create<State>()(
         categories: state.categories.filter((cat) => cat.id !== id || cat.isDefault),
       })),
 
+      archiveCategory: (id) => set((state) => ({
+        categories: state.categories.map((cat) =>
+          cat.id === id ? { ...cat, archived: true } : cat
+        ),
+      })),
+
+      unarchiveCategory: (id) => set((state) => ({
+        categories: state.categories.map((cat) =>
+          cat.id === id ? { ...cat, archived: false } : cat
+        ),
+      })),
+
       addTheme: (themeData) => set((state) => ({
         themes: [...state.themes, { 
           id: uuidv4(), 
@@ -96,8 +112,20 @@ export const useStore = create<State>()(
       deleteTheme: (id) => set((state) => ({
         themes: state.themes.filter((theme) => theme.id !== id),
         // Unlink tasks from deleted theme
-        tasks: state.tasks.map((task) => 
+        tasks: state.tasks.map((task) =>
           task.themeId === id ? { ...task, themeId: undefined } : task
+        ),
+      })),
+
+      archiveTheme: (id) => set((state) => ({
+        themes: state.themes.map((theme) =>
+          theme.id === id ? { ...theme, archived: true } : theme
+        ),
+      })),
+
+      unarchiveTheme: (id) => set((state) => ({
+        themes: state.themes.map((theme) =>
+          theme.id === id ? { ...theme, archived: false } : theme
         ),
       })),
 

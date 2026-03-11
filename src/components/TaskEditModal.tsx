@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import type { Priority, RepeatRule, ReminderTime, SubTask } from '../types';
 import { useStore } from '../store/useStore';
 import { X, Trash2, Tag, Clock, Repeat, Bell, CheckSquare, Plus, Square, Flag, Folder } from 'lucide-react';
@@ -17,11 +17,15 @@ interface TaskEditModalProps {
 
 export const TaskEditModal: React.FC<TaskEditModalProps> = ({ taskId, onClose }) => {
   const task = useStore((state) => state.tasks.find((t) => t.id === taskId));
-  const themes = useStore((state) => state.themes);
-  const categories = useStore((state) => state.categories);
+  const allThemes = useStore((state) => state.themes);
+  const allCategories = useStore((state) => state.categories);
   const updateTask = useStore((state) => state.updateTask);
   const deleteTask = useStore((state) => state.deleteTask);
   const addCategory = useStore((state) => state.addCategory);
+
+  // Filter out archived themes and categories
+  const themes = useMemo(() => allThemes.filter((t) => !t.archived), [allThemes]);
+  const categories = useMemo(() => allCategories.filter((c) => !c.archived), [allCategories]);
   
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -127,6 +131,26 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({ taskId, onClose })
     medium: '中优先级',
     high: '高优先级',
   };
+
+  // Memoize options to prevent infinite re-renders
+  const themeOptions = useMemo(() => [
+    { value: '', label: '默认主题' },
+    ...themes.map((theme) => ({
+      value: theme.id,
+      label: theme.name,
+      color: theme.color,
+    })),
+  ], [themes]);
+
+  const categoryOptions = useMemo(() => [
+    { value: '', label: '未分类' },
+    ...categories.map((cat) => ({
+      value: cat.id,
+      label: cat.name,
+      color: cat.color,
+    })),
+    { value: 'new', label: '+ 新建分类...' },
+  ], [categories]);
 
   return (
     <AnimatePresence>
@@ -342,14 +366,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({ taskId, onClose })
                   <CustomSelect
                     value={themeId || ''}
                     onChange={(value) => setThemeId(value || undefined)}
-                    options={[
-                      { value: '', label: '默认主题' },
-                      ...themes.map((theme) => ({
-                        value: theme.id,
-                        label: theme.name,
-                        color: theme.color,
-                      })),
-                    ]}
+                    options={themeOptions}
                     icon={<Tag size={16} className="text-purple-500" />}
                   />
 
@@ -363,15 +380,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({ taskId, onClose })
                         setCategoryId(value || undefined);
                       }
                     }}
-                    options={[
-                      { value: '', label: '未分类' },
-                      ...categories.map((cat) => ({
-                        value: cat.id,
-                        label: cat.name,
-                        color: cat.color,
-                      })),
-                      { value: 'new', label: '+ 新建分类...' },
-                    ]}
+                    options={categoryOptions}
                     icon={<Folder size={16} className="text-blue-500" />}
                   />
                 </div>
