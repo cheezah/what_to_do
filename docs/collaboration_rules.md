@@ -7,15 +7,15 @@
 ### 当前项目进度状态
 
 - **阶段**: 维护与优化阶段
-- **完成度**: 核心功能 100% 完成，文档已更新。
+- **完成度**: 核心功能 100% 完成，排序功能优化已完成。
 
 ### 上次对话的待办事项
 
-- [x] GitHub 部署配置与 README 文档
-- [x] 删除操作二次确认机制
-- [x] 功能图标常驻显示优化
-- [x] 默认行为调整（周视图、无分类）
-- [x] 架构文档与规范更新
+- [x] 按截至时间排序（支持优先级二次排序）
+- [x] 按分类排序（支持分组和折叠/展开）
+- [x] 按主题排序（支持分组和折叠/展开）
+- [x] 响应式设计和流畅体验优化
+- [x] 相关文档更新
 
 ### 本次对话可执行的操作选项
 
@@ -25,10 +25,10 @@
 
 ### 文档更新提醒
 
-- [product_plan.md](docs/product_plan.md) (最后更新: 2026-03-11)
-- [architecture.md](docs/architecture.md) (最后更新: 2026-03-11)
-- [ui_design.md](docs/ui_design.md) (最后更新: 2026-03-11)
-- [collaboration_rules.md](docs/collaboration_rules.md) (最后更新: 2026-03-11)
+- [product_plan.md](docs/product_plan.md) (最后更新: 2026-03-12)
+- [architecture.md](docs/architecture.md) (最后更新: 2026-03-12)
+- [ui_design.md](docs/ui_design.md) (最后更新: 2026-03-12)
+- [collaboration_rules.md](docs/collaboration_rules.md) (最后更新: 2026-03-12)
 - [changelog_20260311.md](docs/changelog_20260311.md) (新增: 2026-03-11 修改日志)
 - [changelog_20260310.md](docs/changelog_20260310.md) (修改日志)
 - [deployment_guide.md](docs/deployment_guide.md) (部署指南)
@@ -142,4 +142,4 @@
 
 当对话完成后，需要回顾并总结整段对话，将修改写入changelog之中，并对当前系统更新所涉及的架构调整和规范变更进行全面审查，识别所有与原有架构设计和编码规范存在差异的部分。根据审查结果，系统性地更新相关的架构文档、设计规范文件及代码实现，确保所有变更内容准确反映到原有文件中。
 
-_最后更新: 2026-03-11_
+_最后更新: 2026-03-12_

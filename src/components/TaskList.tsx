@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useStore } from '../store/useStore';
-import { CheckCircle2, Circle, Trash2, ArrowUpDown, ChevronUp, ChevronDown, Clock, Repeat, Folder } from 'lucide-react';
+import { CheckCircle2, Circle, Trash2, ArrowUpDown, ChevronUp, ChevronDown, Clock, Repeat, Folder, ChevronRight, Palette } from 'lucide-react';
 import { PRIORITY_COLORS } from '../types';
-import type { SortField } from '../types';
+import type { SortField, Task, Priority, Theme, Category } from '../types';
 import { isTaskVisibleOnDate } from '../utils/taskUtils';
 import { formatTimeRange } from '../utils/timeUtils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -13,6 +13,118 @@ interface TaskListProps {
   date: Date;
   onTaskClick: (taskId: string) => void;
 }
+
+// Priority value map for sorting
+const PRIORITY_VALUE: Record<Priority, number> = { high: 3, medium: 2, low: 1 };
+
+// Group interface for grouped sorting
+interface TaskGroup {
+  id: string;
+  name: string;
+  color?: string;
+  tasks: Task[];
+}
+
+// TaskItem sub-component for reusability
+interface TaskItemProps {
+  task: Task;
+  themes: Theme[];
+  categories: Category[];
+  onTaskClick: (taskId: string) => void;
+  toggleTaskStatus: (taskId: string) => void;
+  handleDeleteClick: (taskId: string, taskTitle: string) => void;
+  compact?: boolean;
+}
+
+const TaskItem: React.FC<TaskItemProps> = ({
+  task,
+  themes,
+  categories,
+  onTaskClick,
+  toggleTaskStatus,
+  handleDeleteClick,
+  compact = false,
+}) => {
+  const priorityColor = PRIORITY_COLORS[task.priority];
+  const theme = themes.find((t) => t.id === task.themeId);
+  const category = categories.find((c) => c.id === task.categoryId);
+
+  return (
+    <motion.div
+      layout
+      variants={listItemVariants}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      transition={springLayout as any}
+      className={`flex items-center bg-white rounded-lg border border-gray-100 hover:shadow-md transition-shadow cursor-pointer relative overflow-hidden ${compact ? 'p-2' : 'p-4 shadow-sm'}`}
+      onClick={() => onTaskClick(task.id)}
+      style={{
+        borderLeft: `4px solid ${priorityColor}`,
+      }}
+    >
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          toggleTaskStatus(task.id);
+        }}
+        className={`mr-3 transition-colors ${task.status === 'completed' ? 'text-gray-400' : 'text-gray-300 hover:text-blue-500'}`}
+        style={{ color: task.status === 'completed' ? priorityColor : undefined, opacity: task.status === 'completed' ? 0.5 : 1 }}
+      >
+        {task.status === 'completed' ? <CheckCircle2 size={compact ? 20 : 24} /> : <Circle size={compact ? 20 : 24} />}
+      </button>
+
+      <div className="flex-1 min-w-0" style={{ opacity: task.status === 'completed' ? 0.5 : 1, transition: 'opacity 0.2s' }}>
+        <div className="flex items-center gap-2 mb-1 flex-wrap">
+          <h3 className={`font-medium text-gray-800 truncate transition-all ${task.status === 'completed' ? 'line-through text-gray-400' : ''} ${compact ? 'text-sm' : ''}`}>
+            {task.title}
+          </h3>
+          {theme && (
+            <span
+              className="text-[10px] px-1.5 py-0.5 rounded-full text-white shadow-sm"
+              style={{ backgroundColor: theme.color }}
+            >
+              {theme.name}
+            </span>
+          )}
+          {!compact && category && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600 flex items-center gap-1">
+              <Folder size={8} />
+              {category.name}
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3 text-xs text-gray-400 mb-1">
+          <div className="flex items-center gap-1">
+            <Clock size={compact ? 10 : 12} />
+            <span>{formatTimeRange(task.startDate, task.endDate, task.isAllDay)}</span>
+          </div>
+          {task.repeatRule && task.repeatRule !== 'none' && (
+            <div className="flex items-center gap-1 text-blue-500 bg-blue-50 px-1.5 rounded">
+              <Repeat size={compact ? 8 : 10} />
+              <span className="capitalize">{task.repeatRule === 'daily' ? '每天' : task.repeatRule === 'weekly' ? '每周' : task.repeatRule === 'monthly' ? '每月' : '每年'}</span>
+            </div>
+          )}
+        </div>
+
+        {!compact && task.description && (
+          <p className="text-xs text-gray-500 truncate">{task.description}</p>
+        )}
+      </div>
+
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          handleDeleteClick(task.id, task.title);
+        }}
+        className={`ml-2 text-gray-400 hover:text-red-500 transition-colors active:scale-90 ${compact ? 'p-1.5' : 'p-2'}`}
+      >
+        <Trash2 size={compact ? 16 : 18} />
+      </button>
+    </motion.div>
+  );
+};
 
 export const TaskList: React.FC<TaskListProps> = ({ date, onTaskClick }) => {
   const tasks = useStore((state) => state.tasks);
@@ -30,42 +142,107 @@ export const TaskList: React.FC<TaskListProps> = ({ date, onTaskClick }) => {
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
   const [taskToDeleteTitle, setTaskToDeleteTitle] = useState('');
 
-  const daysTasks = tasks.filter((task) => isTaskVisibleOnDate(task, date));
+  // Collapsed groups state
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
-  // Sorting Logic
-  const sortedTasks = [...daysTasks].sort((a, b) => {
-    const direction = sortOption.direction === 'asc' ? 1 : -1;
-    
-    switch (sortOption.field) {
-      case 'createdAt':
-        return (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) * direction;
+  const daysTasks = useMemo(() => {
+    return tasks.filter((task) => isTaskVisibleOnDate(task, date));
+  }, [tasks, date]);
+
+  // Toggle group collapse state
+  const toggleGroup = (groupId: string) => {
+    setCollapsedGroups(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(groupId)) {
+        newSet.delete(groupId);
+      } else {
+        newSet.add(groupId);
+      }
+      return newSet;
+    });
+  };
+
+  // Sort tasks with secondary priority sort
+  const sortTasks = (tasksToSort: Task[]): Task[] => {
+    return [...tasksToSort].sort((a, b) => {
+      const direction = sortOption.direction === 'asc' ? 1 : -1;
       
-      case 'dueDate':
-        const dateA = a.endDate ? new Date(a.endDate).getTime() : new Date(a.startDate).getTime();
-        const dateB = b.endDate ? new Date(b.endDate).getTime() : new Date(b.startDate).getTime();
-        return (dateA - dateB) * direction;
-      
-      case 'category':
-        const catA = categories.find(c => c.id === a.categoryId)?.name || '';
-        const catB = categories.find(c => c.id === b.categoryId)?.name || '';
-        if (catA !== catB) return catA.localeCompare(catB) * direction;
-        // Secondary sort by priority
-        const pMap = { high: 3, medium: 2, low: 1 };
-        return (pMap[b.priority] - pMap[a.priority]);
+      switch (sortOption.field) {
+        case 'createdAt':
+          return (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) * direction;
+        
+        case 'dueDate': {
+          const dateA = a.endDate ? new Date(a.endDate).getTime() : new Date(a.startDate).getTime();
+          const dateB = b.endDate ? new Date(b.endDate).getTime() : new Date(b.startDate).getTime();
+          if (dateA !== dateB) return (dateA - dateB) * direction;
+          // Secondary sort by priority
+          return (PRIORITY_VALUE[b.priority] - PRIORITY_VALUE[a.priority]);
+        }
+        
+        case 'category': {
+          const catA = categories.find(c => c.id === a.categoryId)?.name || '';
+          const catB = categories.find(c => c.id === b.categoryId)?.name || '';
+          if (catA !== catB) return catA.localeCompare(catB) * direction;
+          // Secondary sort by priority
+          return (PRIORITY_VALUE[b.priority] - PRIORITY_VALUE[a.priority]);
+        }
 
-      case 'theme':
-        const themeA = themes.find(t => t.id === a.themeId)?.name || 'ZZZ'; // Put no theme last
-        const themeB = themes.find(t => t.id === b.themeId)?.name || 'ZZZ';
-        if (themeA !== themeB) return themeA.localeCompare(themeB) * direction;
-        // Secondary sort by due date
-        const dA = a.endDate ? new Date(a.endDate).getTime() : new Date(a.startDate).getTime();
-        const dB = b.endDate ? new Date(b.endDate).getTime() : new Date(b.startDate).getTime();
-        return (dA - dB);
+        case 'theme': {
+          const themeA = themes.find(t => t.id === a.themeId)?.name || 'ZZZ';
+          const themeB = themes.find(t => t.id === b.themeId)?.name || 'ZZZ';
+          if (themeA !== themeB) return themeA.localeCompare(themeB) * direction;
+          // Secondary sort by priority
+          return (PRIORITY_VALUE[b.priority] - PRIORITY_VALUE[a.priority]);
+        }
 
-      default:
-        return 0;
+        default:
+          return 0;
+      }
+    });
+  };
+
+  // Group tasks by category or theme
+  const groupedTasks = useMemo((): TaskGroup[] => {
+    if (sortOption.field !== 'category' && sortOption.field !== 'theme') {
+      return [];
     }
-  });
+
+    const sorted = sortTasks(daysTasks);
+    const groups: Map<string, TaskGroup> = new Map();
+
+    sorted.forEach(task => {
+      let groupId: string;
+      let groupName: string;
+      let groupColor: string | undefined;
+
+      if (sortOption.field === 'category') {
+        const category = categories.find(c => c.id === task.categoryId);
+        groupId = task.categoryId || 'uncategorized';
+        groupName = category?.name || '无分类';
+        groupColor = category?.color;
+      } else {
+        const theme = themes.find(t => t.id === task.themeId);
+        groupId = task.themeId || 'untagged';
+        groupName = theme?.name || '无主题';
+        groupColor = theme?.color;
+      }
+
+      if (!groups.has(groupId)) {
+        groups.set(groupId, { id: groupId, name: groupName, color: groupColor, tasks: [] });
+      }
+      groups.get(groupId)!.tasks.push(task);
+    });
+
+    return Array.from(groups.values());
+  }, [daysTasks, sortOption, categories, themes]);
+
+  // Non-grouped sorted tasks
+  const sortedTasks = useMemo(() => {
+    if (sortOption.field === 'category' || sortOption.field === 'theme') {
+      return [];
+    }
+    return sortTasks(daysTasks);
+  }, [daysTasks, sortOption]);
 
   const handleSortChange = (field: SortField) => {
     if (sortOption.field === field) {
@@ -158,86 +335,103 @@ export const TaskList: React.FC<TaskListProps> = ({ date, onTaskClick }) => {
         </AnimatePresence>
       </div>
 
-      <motion.div layout className="space-y-3">
-        <AnimatePresence mode="popLayout">
-          {sortedTasks.map((task) => {
-            const priorityColor = PRIORITY_COLORS[task.priority];
-            const theme = themes.find(t => t.id === task.themeId);
-            const category = categories.find(c => c.id === task.categoryId);
-
-            return (
+      {/* Task List - Grouped View */}
+      {sortOption.field === 'category' || sortOption.field === 'theme' ? (
+        <div className="space-y-4">
+          <AnimatePresence mode="popLayout">
+            {groupedTasks.map((group) => (
               <motion.div
-                key={task.id}
+                key={group.id}
                 layout
                 variants={listItemVariants}
                 initial="hidden"
                 animate="visible"
                 exit="exit"
-                transition={springLayout as any}
-                className="flex items-center p-4 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer relative overflow-hidden"
-                onClick={() => onTaskClick(task.id)}
-                style={{
-                  borderLeft: `4px solid ${priorityColor}`,
-                }}
+                className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
               >
-                <button 
-                  onClick={(e) => { e.stopPropagation(); toggleTaskStatus(task.id); }}
-                  className={`mr-3 transition-colors ${task.status === 'completed' ? 'text-gray-400' : 'text-gray-300 hover:text-blue-500'}`}
-                  style={{ color: task.status === 'completed' ? priorityColor : undefined, opacity: task.status === 'completed' ? 0.5 : 1 }}
-                >
-                  {task.status === 'completed' ? <CheckCircle2 size={24} /> : <Circle size={24} />}
-                </button>
-                
-                <div className="flex-1 min-w-0" style={{ opacity: task.status === 'completed' ? 0.5 : 1, transition: 'opacity 0.2s' }}>
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <h3 className={`font-medium text-gray-800 truncate transition-all ${task.status === 'completed' ? 'line-through text-gray-400' : ''}`}>
-                      {task.title}
-                    </h3>
-                    {theme && (
-                      <span 
-                        className="text-[10px] px-1.5 py-0.5 rounded-full text-white shadow-sm"
-                        style={{ backgroundColor: theme.color }}
-                      >
-                        {theme.name}
-                      </span>
-                    )}
-                    {category && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600 flex items-center gap-1">
-                        <Folder size={8} />
-                        {category.name}
-                      </span>
-                    )}
-                  </div>
-                  
-                  <div className="flex items-center gap-3 text-xs text-gray-400 mb-1">
-                     <div className="flex items-center gap-1">
-                       <Clock size={12} />
-                       <span>{formatTimeRange(task.startDate, task.endDate, task.isAllDay)}</span>
-                     </div>
-                     {task.repeatRule && task.repeatRule !== 'none' && (
-                       <div className="flex items-center gap-1 text-blue-500 bg-blue-50 px-1.5 rounded">
-                         <Repeat size={10} />
-                         <span className="capitalize">{task.repeatRule === 'daily' ? '每天' : task.repeatRule === 'weekly' ? '每周' : task.repeatRule === 'monthly' ? '每月' : '每年'}</span>
-                       </div>
-                     )}
-                  </div>
-
-                  {task.description && (
-                    <p className="text-xs text-gray-500 truncate">{task.description}</p>
-                  )}
-                </div>
-
+                {/* Group Header */}
                 <button
-                  onClick={(e) => { e.stopPropagation(); handleDeleteClick(task.id, task.title); }}
-                  className="ml-2 p-2 text-gray-400 hover:text-red-500 transition-colors active:scale-90"
+                  onClick={() => toggleGroup(group.id)}
+                  className="w-full flex items-center justify-between p-3 bg-gray-50/50 hover:bg-gray-100/50 transition-colors border-b border-gray-100"
                 >
-                  <Trash2 size={18} />
+                  <div className="flex items-center gap-2">
+                    {sortOption.field === 'category' ? (
+                      <Folder size={16} className="text-gray-500" />
+                    ) : (
+                      <Palette size={16} className="text-gray-500" />
+                    )}
+                    {group.color ? (
+                      <span
+                        className="text-sm font-medium px-2 py-0.5 rounded-full text-white"
+                        style={{ backgroundColor: group.color }}
+                      >
+                        {group.name}
+                      </span>
+                    ) : (
+                      <span className="text-sm font-medium text-gray-600">
+                        {group.name}
+                      </span>
+                    )}
+                    <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">
+                      {group.tasks.length}
+                    </span>
+                  </div>
+                  <motion.div
+                    animate={{ rotate: collapsedGroups.has(group.id) ? -90 : 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <ChevronRight size={18} className="text-gray-400" />
+                  </motion.div>
                 </button>
+
+                {/* Group Tasks */}
+                <AnimatePresence>
+                  {!collapsedGroups.has(group.id) && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2, ease: 'easeInOut' }}
+                      className="overflow-hidden"
+                    >
+                      <div className="p-2 space-y-2">
+                        {group.tasks.map((task) => (
+                          <TaskItem
+                            key={task.id}
+                            task={task}
+                            themes={themes}
+                            categories={categories}
+                            onTaskClick={onTaskClick}
+                            toggleTaskStatus={toggleTaskStatus}
+                            handleDeleteClick={handleDeleteClick}
+                          />
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </motion.div>
-            );
-          })}
-        </AnimatePresence>
-      </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      ) : (
+        /* Task List - Flat View */
+        <motion.div layout className="space-y-3">
+          <AnimatePresence mode="popLayout">
+            {sortedTasks.map((task) => (
+              <TaskItem
+                key={task.id}
+                task={task}
+                themes={themes}
+                categories={categories}
+                onTaskClick={onTaskClick}
+                toggleTaskStatus={toggleTaskStatus}
+                handleDeleteClick={handleDeleteClick}
+              />
+            ))}
+          </AnimatePresence>
+        </motion.div>
+      )}
 
       <ConfirmDialog
         isOpen={showConfirm}
